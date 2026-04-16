@@ -93,7 +93,7 @@ public class ColorCache(Color color) {
     }
 
     public static implicit operator Color(ColorCache cache) {
-        Unsafe.SkipInit(out Color color);
+        System.Runtime.CompilerServices.Unsafe.SkipInit(out Color color);
         cache.SetColor(ref color);
         return color;
     }

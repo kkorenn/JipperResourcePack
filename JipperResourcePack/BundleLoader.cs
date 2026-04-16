@@ -40,9 +40,9 @@ public class BundleLoader {
                     
                     if(FontAsset.material) {
                         Material fontMaterial = FontAsset.material;
-                        Shader fallbackShader = Shader.Find("TextMeshPro/Mobile/Distance Field");
+                        Shader fallbackShader = Shader.Find("TextMeshPro/Distance Field");
                         if(!fallbackShader) {
-                            fallbackShader = Shader.Find("TextMeshPro/Distance Field");
+                            fallbackShader = Shader.Find("TextMeshPro/Mobile/Distance Field");
                             if(!fallbackShader) {
                                 fallbackShader = Shader.Find("UI/Default");
                             }

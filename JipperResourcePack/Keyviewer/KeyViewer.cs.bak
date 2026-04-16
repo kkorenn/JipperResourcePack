@@ -1302,56 +1302,56 @@ public class KeyViewer : Feature {
 
     private void Initialize0KeyViewer() {
         int remove = Settings.DownLocation ? 200 : 0;
-        for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 259 - remove, 50, 0);
-        Keys[8] = CreateKey(8, 81 + 54, 205 - remove, 77, 1);
-        Keys[9] = CreateKey(9, 81, 205 - remove, 50, 1);
-        Keys[10] = CreateKey(10, 54 * 4, 205 - remove, 77, 1);
-        Keys[11] = CreateKey(11, 54 * 4 + 81, 205 - remove, 50, 1);
+        for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 279 - remove, 50, 0);
+        Keys[8] = CreateKey(8, 81 + 54, 225 - remove, 77, 1);
+        Keys[9] = CreateKey(9, 81, 225 - remove, 50, 1);
+        Keys[10] = CreateKey(10, 54 * 4, 225 - remove, 77, 1);
+        Keys[11] = CreateKey(11, 54 * 4 + 81, 225 - remove, 50, 1);
         for(int i = 0; i < 4; i++) {
             int j = BackSequence12[i];
             Keys[j].rainParent = Keys[i + 2].rainParent;
         }
-        Kps = CreateKey(-1, 0, 205 - remove, 77, -1);
-        Total = CreateKey(-2, 81 + 54 * 5, 205 - remove, 77, -1);
+        Kps = CreateKey(-1, 0, 225 - remove, 77, -1);
+        Total = CreateKey(-2, 81 + 54 * 5, 225 - remove, 77, -1);
     }
 
     private void Initialize1KeyViewer() {
         int remove = Settings.DownLocation ? 200 : 0;
-        for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 300 - remove, 50, 0);
+        for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 320 - remove, 50, 0);
         for(int i = 0; i < 8; i++) {
             int j = BackSequence16[i];
-            Keys[j] = CreateKey(j, 54 * i, 246 - remove, 50, 1);
+            Keys[j] = CreateKey(j, 54 * i, 266 - remove, 50, 1);
             Keys[j].rainParent = Keys[i].rainParent;
         }
-        Kps = CreateKey(-1, 0, 200 - remove, 212, -1, true);
-        Total = CreateKey(-2, 216, 200 - remove, 212, -1, true);
+        Kps = CreateKey(-1, 0, 220 - remove, 212, -1, true);
+        Total = CreateKey(-2, 216, 220 - remove, 212, -1, true);
     }
 
     private void Initialize2KeyViewer() {
         int remove = Settings.DownLocation ? 200 : 0;
-        for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 313 - remove, 50, 0);
+        for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 333 - remove, 50, 0);
         for(int i = 0; i < 8; i++) {
             int j = BackSequence20[i];
-            Keys[j] = CreateKey(j, 54 * i, 259 - remove, 50, 1);
+            Keys[j] = CreateKey(j, 54 * i, 279 - remove, 50, 1);
             Keys[j].rainParent = Keys[i].rainParent;
         }
-        Keys[16] = CreateKey(16, 81 + 54, 205 - remove, 77, 3);
-        Keys[17] = CreateKey(17, 81, 205 - remove, 50, 3);
-        Keys[18] = CreateKey(18, 54 * 4, 205 - remove, 77, 3);
-        Keys[19] = CreateKey(19, 54 * 4 + 81, 205 - remove, 50, 3);
-        Kps = CreateKey(-1, 0, 205 - remove, 77, -1);
-        Total = CreateKey(-2, 81 + 54 * 5, 205 - remove, 77, -1);
+        Keys[16] = CreateKey(16, 81 + 54, 225 - remove, 77, 3);
+        Keys[17] = CreateKey(17, 81, 225 - remove, 50, 3);
+        Keys[18] = CreateKey(18, 54 * 4, 225 - remove, 77, 3);
+        Keys[19] = CreateKey(19, 54 * 4 + 81, 225 - remove, 50, 3);
+        Kps = CreateKey(-1, 0, 225 - remove, 77, -1);
+        Total = CreateKey(-2, 81 + 54 * 5, 225 - remove, 77, -1);
     }
 
     private void Initialize3KeyViewer() {
         int remove = Settings.DownLocation ? 200 : 0;
-        for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 259 - remove, 50, 0);
-        Keys[8] = CreateKey(8, 81, 205 - remove, 131, 1);
+        for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 279 - remove, 50, 0);
+        Keys[8] = CreateKey(8, 81, 225 - remove, 131, 1);
         Keys[8].rainParent = Keys[3].rainParent;
-        Keys[9] = CreateKey(9, 54 * 4, 205 - remove, 131, 1);
+        Keys[9] = CreateKey(9, 54 * 4, 225 - remove, 131, 1);
         Keys[9].rainParent = Keys[4].rainParent;
-        Kps = CreateKey(-1, 0, 205 - remove, 77, -1);
-        Total = CreateKey(-2, 81 + 54 * 5, 205 - remove, 77, -1);
+        Kps = CreateKey(-1, 0, 225 - remove, 77, -1);
+        Total = CreateKey(-2, 81 + 54 * 5, 225 - remove, 77, -1);
     }
 
     private void InitializeFootKeyViewer(int size) {
