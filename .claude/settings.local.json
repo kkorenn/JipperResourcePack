@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(brew list:*)",
+      "Bash(msbuild JipperResourcePack/JipperResourcePack.csproj /p:TargetFrameworkVersion=v4.8 /p:Configuration=Release)",
+      "Bash(export DOTNET_ROOT=\"/opt/homebrew/opt/dotnet/libexec\")",
+      "Bash(dotnet /tmp/jrp_build/tools/Microsoft.Net.Compilers.Toolset.4.8.0/tasks/netcore/bincore/csc.dll @/tmp/jrp_build/jrp_full.rsp)"
+    ]
+  }
+}

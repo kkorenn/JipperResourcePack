@@ -81,7 +81,9 @@ public class KeyViewer : Feature {
         "CounterBackgroundLeft",
         "CounterBackgroundRight",
         "CounterTintLeft",
-        "CounterTintRight"
+        "CounterTintRight",
+        "CounterTextLeft",
+        "CounterTextRight"
     ];
 
     public static KeyViewerSettings Settings;
@@ -112,6 +114,8 @@ public class KeyViewer : Feature {
     public static readonly Color CounterBackgroundRight = new(0f, 0f, 0f, 0f);
     public static readonly Color CounterTintLeft = Color.white;
     public static readonly Color CounterTintRight = Color.white;
+    public static readonly Color CounterTextLeft = new(Text.r, Text.g, Text.b, 0.25f);
+    public static readonly Color CounterTextRight = new(Text.r, Text.g, Text.b, 0.25f);
     public static readonly byte[] BackSequence10 = [8, 9];
     public static readonly byte[] BackSequence12 = [9, 8, 10, 11];
     public static readonly byte[] BackSequence16 = [12, 13, 9, 8, 10, 11, 14, 15];
@@ -136,6 +140,8 @@ public class KeyViewer : Feature {
     public Image CounterBannerOutline;
     public Texture2D CounterBannerLeftTexture;
     public Texture2D CounterBannerRightTexture;
+    public AsyncText CounterBannerLeftCounterText;
+    public AsyncText CounterBannerRightCounterText;
     public ConcurrentQueue<long> PressTimes;
     public Stopwatch Stopwatch;
     private bool Save;
@@ -153,6 +159,7 @@ public class KeyViewer : Feature {
     private string rainSizeString;
     private string rainHeightString;
     private string sizeString;
+    private KeyViewerFrameUpdater frameUpdater;
 
     public KeyViewer() : base(Main.Instance, nameof(KeyViewer), settingType: typeof(KeyViewerSettings)) {
         if(ADOBase.platform != Platform.Windows) return;
@@ -214,6 +221,8 @@ public class KeyViewer : Feature {
         Object.DontDestroyOnLoad(KeyViewerObject);
         PressTimes = new ConcurrentQueue<long>();
         Stopwatch = Stopwatch.StartNew();
+        frameUpdater = KeyViewerObject.AddComponent<KeyViewerFrameUpdater>();
+        frameUpdater.owner = this;
         KeyinputListener = new Thread(ListenKey);
         KeyinputListener.Start();
         Application.wantsToQuit += Application_wantsToQuit;
@@ -237,6 +246,8 @@ public class KeyViewer : Feature {
         KeyinputListener.Abort();
         KeyinputListener.Interrupt();
         KeyinputListener = null;
+        if(frameUpdater) frameUpdater.owner = null;
+        frameUpdater = null;
         GC.SuppressFinalize(PressTimes);
         PressTimes = null;
         Application.wantsToQuit -= Application_wantsToQuit;
@@ -248,13 +259,18 @@ public class KeyViewer : Feature {
         KeyViewerSettings settings = Settings;
         settingGUI.AddSettingToggle(ref KeyShare, localization["keyViewer.keyShare"]);
         settingGUI.AddSettingToggle(ref settings.DownLocation, localization["keyViewer.downLocation"], ResetKeyViewer);
+        settingGUI.AddSettingToggle(ref settings.CounterTextInsideBanners, "Show KPS/Total inside banner images", ResetKeyViewer);
         if(GUILayout.Button(localization["keyViewer.resetCount"])) confirmResetCount = true;
         if(confirmResetCount) {
             GUILayout.Label("<color=red>" + localization["keyViewer.resetCountConfirmText"] + "</color>");
             if(GUILayout.Button(localization["keyViewer.resetCountConfirm"])) {
                 confirmResetCount = false;
+                lastKps = 0;
+                Kps.value.tmp.text = "0";
                 Total.value.tmp.text = "0";
                 for(int i = 0; i < settings.Count.Length; i++) settings.Count[i] = 0;
+                settings.TotalCount = 0;
+                UpdateCounterBannerCounterTexts();
                 Main.Instance.SaveSetting();
             }
             if(GUILayout.Button(localization["keyViewer.resetCountCancel"])) confirmResetCount = false;
@@ -388,6 +404,8 @@ public class KeyViewer : Feature {
                     "CounterBackgroundRight" => "Banner Right Background Fill",
                     "CounterTintLeft" => "Banner Left Image Color",
                     "CounterTintRight" => "Banner Right Image Color",
+                    "CounterTextLeft" => "KPS Value Text Color",
+                    "CounterTextRight" => "Total Value Text Color",
                     _ => localization["keyViewer.color." + char.ToLower(names[i][0]) + names[i][1..]]
                 };
                 GUILayout.BeginHorizontal();
@@ -970,8 +988,20 @@ public class KeyViewer : Feature {
             Settings.Outline
         );
 
-        Kps.gameObject.SetActive(false);
-        Total.gameObject.SetActive(false);
+        bool showCountersInsideBanners = Settings.CounterTextInsideBanners;
+        if(showCountersInsideBanners) {
+            CounterBannerLeftCounterText = CreateCounterBannerCounterText("LeftCounterText", leftMaskRect, lastKps.ToString(), Settings.CounterTextLeft);
+            CounterBannerRightCounterText = CreateCounterBannerCounterText(
+                "RightCounterText",
+                rightMaskRect,
+                Settings.TotalCount.ToString(),
+                Settings.CounterTextRight
+            );
+            UpdateCounterBannerCounterTexts();
+        }
+
+        Kps.gameObject.SetActive(!showCountersInsideBanners);
+        Total.gameObject.SetActive(!showCountersInsideBanners);
     }
 
     private static Image CreateCounterBannerLayer(string name, RectTransform parent, Sprite sprite, Vector2 size, float y, Color color) {
@@ -1085,6 +1115,29 @@ public class KeyViewer : Feature {
         return image;
     }
 
+    private static AsyncText CreateCounterBannerCounterText(string name, RectTransform parent, string value, Color color) {
+        GameObject gameObject = new(name);
+        RectTransform transform = gameObject.AddComponent<RectTransform>();
+        transform.SetParent(parent);
+        transform.anchorMin = Vector2.zero;
+        transform.anchorMax = Vector2.one;
+        transform.offsetMin = new Vector2(4f, 4f);
+        transform.offsetMax = new Vector2(-4f, -4f);
+        transform.localScale = Vector3.one;
+
+        TextMeshProUGUI text = gameObject.AddComponent<TextMeshProUGUI>();
+        text.font = BundleLoader.FontAsset;
+        text.richText = true;
+        text.enableAutoSizing = true;
+        text.fontSizeMin = 8f;
+        text.fontSizeMax = 28f;
+        text.enableWordWrapping = false;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = color;
+        text.text = value;
+        return gameObject.AddComponent<AsyncText>();
+    }
+
     private static Vector2 GetContainedSize(Texture2D texture, float maxWidth, float maxHeight) {
         float width = Mathf.Max(1f, maxWidth);
         float height = Mathf.Max(1f, maxHeight);
@@ -1174,11 +1227,19 @@ public class KeyViewer : Feature {
         if(CounterBannerRightBackgroundFill) CounterBannerRightBackgroundFill.color = Settings.CounterBackgroundRight;
         if(CounterBannerLeftImage && CounterBannerLeftImage.texture) CounterBannerLeftImage.color = OpaqueTint(Settings.CounterTintLeft);
         if(CounterBannerRightImage && CounterBannerRightImage.texture) CounterBannerRightImage.color = OpaqueTint(Settings.CounterTintRight);
+        if(CounterBannerLeftCounterText) CounterBannerLeftCounterText.color = Settings.CounterTextLeft;
+        if(CounterBannerRightCounterText) CounterBannerRightCounterText.color = Settings.CounterTextRight;
     }
 
     private static Color OpaqueTint(Color color) {
         color.a = 1f;
         return color;
+    }
+
+    private void UpdateCounterBannerCounterTexts() {
+        if(!Settings.CounterTextInsideBanners) return;
+        if(CounterBannerLeftCounterText) CounterBannerLeftCounterText.text = lastKps.ToString();
+        if(CounterBannerRightCounterText) CounterBannerRightCounterText.text = Settings.TotalCount.ToString();
     }
 
     private void DestroyCounterBanner() {
@@ -1194,6 +1255,8 @@ public class KeyViewer : Feature {
         CounterBannerRightFrameOutline = null;
         CounterBannerBackground = null;
         CounterBannerOutline = null;
+        CounterBannerLeftCounterText = null;
+        CounterBannerRightCounterText = null;
         if(CounterBannerLeftTexture) Object.Destroy(CounterBannerLeftTexture);
         if(CounterBannerRightTexture && CounterBannerRightTexture != CounterBannerLeftTexture) Object.Destroy(CounterBannerRightTexture);
         CounterBannerLeftTexture = null;
@@ -1219,6 +1282,29 @@ public class KeyViewer : Feature {
 
     private static bool CheckKey(KeyCode keyCode) {
         return (int) keyCode < 0x1000 ? Input.GetKey(keyCode) : GetAsyncKeyState((int) keyCode - 0x1000) != 0;
+    }
+
+    private void UpdateKpsPerFrame() {
+        if(!Enabled || PressTimes == null || Stopwatch == null || !Kps || !Kps.value) return;
+        long elapsedMilliseconds = Stopwatch.ElapsedMilliseconds;
+        while(PressTimes.TryPeek(out long result)) {
+            if(elapsedMilliseconds - result > 1000) {
+                PressTimes.TryDequeue(out long _);
+                continue;
+            }
+            break;
+        }
+        lastKps = PressTimes.Count;
+        Kps.value.text = lastKps.ToString();
+        if(Settings.CounterTextInsideBanners && CounterBannerLeftCounterText) CounterBannerLeftCounterText.text = lastKps.ToString();
+    }
+
+    private class KeyViewerFrameUpdater : MonoBehaviour {
+        public KeyViewer owner;
+
+        private void Update() {
+            owner?.UpdateKpsPerFrame();
+        }
     }
 
     private void ListenKey() {
@@ -1249,6 +1335,7 @@ public class KeyViewer : Feature {
                     if(i == 9 && settings.KeyViewerStyle == KeyviewerStyle.Key10) i = 10;
                     key.value.text = (++settings.Count[i]).ToString();
                     Total.value.text = (++settings.TotalCount).ToString();
+                    UpdateCounterBannerCounterTexts();
                     PressTimes.Enqueue(elapsedMilliseconds);
                     if(settings.useRain) {
                         RawRain rawRain = new(elapsedMilliseconds, key.color);
@@ -1269,6 +1356,7 @@ public class KeyViewer : Feature {
                     PressTimes.Enqueue(elapsedMilliseconds);
                     settings.Count[index]++;
                     Total.value.text = (++settings.TotalCount).ToString();
+                    UpdateCounterBannerCounterTexts();
                     Save = true;
                 }
                 while(PressTimes.TryPeek(out long result)) {
@@ -1279,6 +1367,7 @@ public class KeyViewer : Feature {
                 if(lastKps == PressTimes.Count) continue;
                 lastKps = PressTimes.Count;
                 Kps.value.text = lastKps.ToString();
+                UpdateCounterBannerCounterTexts();
                 if(++repeat < 100 || !Save || !Enabled) continue;
                 Main.Instance.SaveSetting();
                 Save = false;
@@ -1300,8 +1389,13 @@ public class KeyViewer : Feature {
         if(key.value) key.value.color = key.text.color;
     }
 
+    private int GetKeyViewerVerticalOffset() {
+        // Keep default mode slightly lower without requiring DownLocation toggle.
+        return Settings.DownLocation ? 200 : 93;
+    }
+
     private void Initialize0KeyViewer() {
-        int remove = Settings.DownLocation ? 200 : 0;
+        int remove = GetKeyViewerVerticalOffset();
         for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 259 - remove, 50, 0);
         Keys[8] = CreateKey(8, 81 + 54, 205 - remove, 77, 1);
         Keys[9] = CreateKey(9, 81, 205 - remove, 50, 1);
@@ -1316,7 +1410,7 @@ public class KeyViewer : Feature {
     }
 
     private void Initialize1KeyViewer() {
-        int remove = Settings.DownLocation ? 200 : 0;
+        int remove = GetKeyViewerVerticalOffset();
         for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 300 - remove, 50, 0);
         for(int i = 0; i < 8; i++) {
             int j = BackSequence16[i];
@@ -1328,7 +1422,7 @@ public class KeyViewer : Feature {
     }
 
     private void Initialize2KeyViewer() {
-        int remove = Settings.DownLocation ? 200 : 0;
+        int remove = GetKeyViewerVerticalOffset();
         for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 313 - remove, 50, 0);
         for(int i = 0; i < 8; i++) {
             int j = BackSequence20[i];
@@ -1344,7 +1438,7 @@ public class KeyViewer : Feature {
     }
 
     private void Initialize3KeyViewer() {
-        int remove = Settings.DownLocation ? 200 : 0;
+        int remove = GetKeyViewerVerticalOffset();
         for(int i = 0; i < 8; i++) Keys[i] = CreateKey(i, 54 * i, 259 - remove, 50, 0);
         Keys[8] = CreateKey(8, 81, 205 - remove, 131, 1);
         Keys[8].rainParent = Keys[3].rainParent;
@@ -1650,6 +1744,7 @@ public class KeyViewer : Feature {
         public int[] Count = new int[36];
         public int TotalCount;
         public bool DownLocation;
+        public bool CounterTextInsideBanners = true;
         public bool AutoSetupKeyLimit = true;
         public float Size = 1;
         public bool useRain = true;
@@ -1682,6 +1777,8 @@ public class KeyViewer : Feature {
         public ColorCache CounterBackgroundRight = new(KeyViewer.CounterBackgroundRight);
         public ColorCache CounterTintLeft = new(KeyViewer.CounterTintLeft);
         public ColorCache CounterTintRight = new(KeyViewer.CounterTintRight);
+        public ColorCache CounterTextLeft = new(KeyViewer.CounterTextLeft);
+        public ColorCache CounterTextRight = new(KeyViewer.CounterTextRight);
 
         public KeyViewerSettings(JAMod mod, JObject jsonObject = null) : base(mod, jsonObject) {
             Settings = this;
@@ -1709,6 +1806,8 @@ public class KeyViewer : Feature {
             if(jsonObject?["CounterBackgroundRight"] == null) CounterBackgroundRight = new ColorCache(KeyViewer.CounterBackgroundRight);
             if(jsonObject?["CounterTintLeft"] == null) CounterTintLeft = new ColorCache(KeyViewer.CounterTintLeft);
             if(jsonObject?["CounterTintRight"] == null) CounterTintRight = new ColorCache(KeyViewer.CounterTintRight);
+            if(jsonObject?["CounterTextLeft"] == null) CounterTextLeft = new ColorCache(KeyViewer.CounterTextLeft);
+            if(jsonObject?["CounterTextRight"] == null) CounterTextRight = new ColorCache(KeyViewer.CounterTextRight);
         }
     }
 }
